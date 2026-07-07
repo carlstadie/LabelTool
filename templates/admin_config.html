@@ -1,0 +1,55 @@
+{% extends "admin_base.html" %}
+{% block title %}Configuration · {{ cfg.app_name }}{% endblock %}
+{% block content %}
+<div class="section-header">
+  <div class="section-title">Configuration</div>
+</div>
+<div style="max-width:600px;">
+  <div class="card">
+    <div class="card-header"><span style="font-weight:600;">Application Settings</span></div>
+    <div class="card-body">
+      <form method="POST">
+        <div class="form-group">
+          <label class="form-label">Application Name</label>
+          <input type="text" name="app_name" class="form-control" value="{{ cfg.app_name }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Subtitle</label>
+          <input type="text" name="app_subtitle" class="form-control" value="{{ cfg.app_subtitle }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Organization Line</label>
+          <input type="text" name="organization" class="form-control" value="{{ cfg.organization }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Logo URL (optional)</label>
+          <input type="url" name="logo_url" class="form-control" value="{{ cfg.logo_url }}" placeholder="https://...">
+          <div class="form-hint">Leave blank to use the default AWI text logo</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contact Email</label>
+          <input type="email" name="contact_email" class="form-control" value="{{ cfg.contact_email }}">
+        </div>
+        <hr style="border:none;border-top:1px solid var(--gray-200);margin:1rem 0;">
+        <div class="form-group">
+          <label class="form-label">Admin Token</label>
+          <input type="text" name="admin_token" class="form-control" value="{{ cfg.admin_token }}">
+          <div class="form-hint">Used to log in to the admin portal</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Max Preview Size (px)</label>
+            <input type="number" name="max_preview_px" class="form-control" value="{{ cfg.max_preview_px }}" min="500" max="8000">
+            <div class="form-hint">Larger = better quality, slower</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Default Tile Size (m)</label>
+            <input type="number" name="default_tile_size_m" class="form-control" value="{{ cfg.default_tile_size_m }}" min="10" max="10000">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Configuration</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

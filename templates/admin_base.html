@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="app-shell">
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      {% if cfg.logo_url %}
+        <img src="{{ cfg.logo_url }}" class="topbar-logo" alt="Logo">
+      {% else %}
+        <div class="topbar-logo-placeholder">AWI</div>
+      {% endif %}
+      <div>
+        <div class="topbar-name">{{ cfg.app_name }}</div>
+        <div class="topbar-sub">{{ cfg.organization }}</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-badge">
+        <svg width="10" height="10" viewBox="0 0 10 10" style="display:inline;margin-right:3px"><circle cx="5" cy="5" r="4" fill="#10b981"/></svg>
+        ADMIN
+      </span>
+      <div class="topbar-divider"></div>
+      <a href="/help" style="color:var(--ice-200);font-size:.8rem;" target="_blank">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:2px"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Help
+      </a>
+      <div class="topbar-divider"></div>
+      <a href="/admin/logout" style="color:var(--ice-200);font-size:.8rem;">Log out</a>
+    </div>
+  </header>
+
+  <div class="content-area">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Overview</div>
+      <a href="/admin/dashboard" class="sidebar-link {% if request.path == '/admin/dashboard' or request.path == '/admin' %}active{% endif %}">
+        <svg class="sidebar-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+
+      <div class="sidebar-section">Data</div>
+      <a href="/admin/groups" class="sidebar-link {% if '/groups' in request.path %}active{% endif %}">
+        <svg class="sidebar-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Groups
+      </a>
+      <a href="/admin/upload" class="sidebar-link {% if '/upload' in request.path %}active{% endif %}">
+        <svg class="sidebar-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload Images
+      </a>
+      <a href="/admin/images" class="sidebar-link {% if '/images' in request.path %}active{% endif %}">
+        <svg class="sidebar-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Images
+      </a>
+      <a href="/admin/classes" class="sidebar-link {% if '/classes' in request.path %}active{% endif %}">
+        <svg class="sidebar-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Label Classes
+      </a>
+
+      <div class="sidebar-section">Export</div>
+      <a href="/admin/export" class="sidebar-link {% if '/export' in request.path %}active{% endif %}">
+        <svg class="sidebar-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export Labels
+      </a>
+
+      <div class="sidebar-section">Settings</div>
+      <a href="/admin/config" class="sidebar-link {% if '/config' in request.path %}active{% endif %}">
+        <svg class="sidebar-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        Configuration
+      </a>
+
+      <div class="sidebar-spacer"></div>
+      <div class="sidebar-footer">
+        {{ cfg.app_name }}<br>
+        AWI Permafrost RS<br>
+        {{ cfg.contact_email }}
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}

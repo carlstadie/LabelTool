@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Admin Login · {{ cfg.app_name }}{% endblock %}
+{% block body %}
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo-wrap">
+      {% if cfg.logo_url %}
+        <img src="{{ cfg.logo_url }}" style="height:48px;margin-bottom:.75rem;display:block;margin-left:auto;margin-right:auto;">
+      {% else %}
+        <div class="login-logo-box">AWI</div>
+      {% endif %}
+      <div class="login-title">{{ cfg.app_name }}</div>
+      <div class="login-sub">Admin Portal</div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}" style="margin-bottom:1rem;">{{ msg }}</div>
+    {% endfor %}
+    {% endwith %}
+
+    <form method="POST">
+      <div class="form-group">
+        <label class="form-label">Admin Token</label>
+        <input type="password" name="token" class="form-control" placeholder="Enter token" required autofocus>
+      </div>
+      <button type="submit" class="btn btn-primary">Access Admin Portal</button>
+    </form>
+
+    <div class="login-org" style="margin-top:1.25rem;">
+      {{ cfg.organization }}<br>
+      <a href="/worker" style="color:var(--ice-400);">→ Worker Portal</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

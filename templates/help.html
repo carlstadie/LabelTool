@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Documentation · {{ cfg.app_name }}{% endblock %}
+{% block body %}
+<header class="topbar">
+  <div class="topbar-brand">
+    {% if cfg.logo_url %}<img src="{{ cfg.logo_url }}" class="topbar-logo">
+    {% else %}<div class="topbar-logo-placeholder">AWI</div>{% endif %}
+    <div><div class="topbar-name">{{ cfg.app_name }}</div><div class="topbar-sub">Documentation</div></div>
+  </div>
+  <div class="topbar-right">
+    <a href="/" style="color:var(--ice-200);font-size:.8rem;">← Home</a>
+  </div>
+</header>
+
+<div style="padding:2rem;max-width:1000px;margin:0 auto;">
+  <div class="help-grid">
+
+    <!-- Nav -->
+    <div class="help-nav">
+      <div style="font-size:.7rem;font-family:var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--gray-400);margin-bottom:.5rem;">Contents</div>
+      <a href="#overview">Overview</a>
+      <a href="#admin">Admin Portal</a>
+      <a href="#worker">Worker Portal</a>
+      <a href="#labelling">Labelling Tool</a>
+      <a href="#keyboard">Keyboard Shortcuts</a>
+      <a href="#export">Export Formats</a>
+      <a href="#setup">Setup & Installation</a>
+    </div>
+
+    <!-- Content -->
+    <div>
+
+      <div class="help-section" id="overview">
+        <h2>Overview</h2>
+        <p>{{ cfg.app_name }} is a local-network remote sensing image labelling platform developed for the Permafrost Remote Sensing section of the Alfred Wegener Institute. It supports GeoTIFF image uploads, multi-class polygon/rectangle annotation, and export to multiple geospatial formats.</p>
+        <p style="margin-top:.75rem;">The platform runs on a local server and provides two separate access points:</p>
+        <ul style="margin:.5rem 0 .5rem 1.25rem;line-height:2;">
+          <li><strong>Admin Portal</strong> — <code>http://&lt;server&gt;:5000/admin</code></li>
+          <li><strong>Worker Portal</strong> — <code>http://&lt;server&gt;:5000/worker</code></li>
+        </ul>
+      </div>
+
+      <div class="help-section" id="admin">
+        <h2>Admin Portal</h2>
+        <p>Log in with the <strong>Admin Token</strong> (default: <code>awi-admin-2024</code>, can be changed in Admin Config).</p>
+        <h4 style="margin-top:1rem;">Groups</h4>
+        <p>Organise images into groups by <em>project</em>, <em>region</em>, or <em>sensor</em>. Create groups before uploading images.</p>
+        <h4 style="margin-top:1rem;">Upload Images</h4>
+        <p>Drag &amp; drop or browse for GeoTIFF files (.tif / .tiff). Images must be georeferenced. Upon upload, metadata (CRS, resolution, band count, bounding box) is extracted and a preview PNG is generated. Large images are resampled for display.</p>
+        <h4 style="margin-top:1rem;">Label Classes</h4>
+        <p>Define classes with a <strong>key number</strong> (1–9), name, colour, and description. Workers press the corresponding number key to assign the class to a drawn shape. Default classes are provided for common permafrost features.</p>
+        <h4 style="margin-top:1rem;">Configuration</h4>
+        <p>Set the application name, subtitle, organisation line, logo URL, admin token, and default tile size.</p>
+      </div>
+
+      <div class="help-section" id="worker">
+        <h2>Worker Portal</h2>
+        <p>Workers enter their name (no password required) at login. The name is recorded with every label created. The image queue shows all <strong>available</strong> images. Clicking <em>Label →</em> opens the labelling tool and marks the image as <em>in progress</em>.</p>
+      </div>
+
+      <div class="help-section" id="labelling">
+        <h2>Labelling Tool</h2>
+        <h4>Ribbon Tools</h4>
+        <ul style="margin:.5rem 0 .5rem 1.25rem;line-height:2;">
+          <li><strong>Pan</strong> — Navigate the image (drag to pan, scroll to zoom)</li>
+          <li><strong>Rectangle</strong> — Click and drag to draw a bounding box (like QGIS)</li>
+          <li><strong>Polygon</strong> — Click vertices; double-click to close</li>
+          <li><strong>Delete</strong> — Click any label to remove it</li>
+          <li><strong>Grid</strong> — Toggle tile grid overlay</li>
+        </ul>
+        <h4 style="margin-top:1rem;">Tile Grid</h4>
+        <p>The grid divides the image into tiles of the specified size in <strong>metres</strong>. Adjust the slider in the ribbon (10 m – 2000 m). The grid is redrawn instantly and is stored per-label for provenance.</p>
+        <h4 style="margin-top:1rem;">Band Order</h4>
+        <p>Use the <strong>R / G / B</strong> dropdowns in the ribbon to change which bands are mapped to red, green, and blue. The image preview re-renders after a short delay. Useful for false-colour composites on multi-band imagery.</p>
+        <h4 style="margin-top:1rem;">Assigning Classes</h4>
+        <p>After you finish drawing a shape, a class picker automatically appears. Select a class by clicking it or pressing its corresponding number key (0–9). Key <strong>0</strong> opens the <em>Other</em> flow: enter a new class name or type an existing class name/number.</p>
+        <h4 style="margin-top:1rem;">Saving</h4>
+        <p>Labels are saved to the server immediately after creation. You can still click <strong>Save</strong> or press <span class="help-kbd">S</span> to retry any pending unsaved labels; an auto-save retry also runs every 2 minutes. Dashed borders indicate unsaved labels; solid borders indicate saved ones.</p>
+        <h4 style="margin-top:1rem;">Finishing</h4>
+        <p>Use <strong>Close</strong> (or <span class="help-kbd">C</span>) to save your current labels and end your session while returning the image to <em>available</em>. Use <strong>Complete</strong> (or <span class="help-kbd">Enter</span>) to save all labels and mark the image as <em>done</em>.</p>
+      </div>
+
+      <div class="help-section" id="keyboard">
+        <h2>Keyboard Shortcuts</h2>
+        <table>
+          <thead><tr><th>Key</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><span class="help-kbd">R</span></td><td>Rectangle draw mode</td></tr>
+            <tr><td><span class="help-kbd">P</span></td><td>Polygon draw mode</td></tr>
+            <tr><td><span class="help-kbd">D</span></td><td>Delete mode (click label to remove)</td></tr>
+            <tr><td><span class="help-kbd">C</span></td><td>Close image and return it to queue</td></tr>
+            <tr><td><span class="help-kbd">Esc</span></td><td>Return to pan/cursor mode</td></tr>
+            <tr><td><span class="help-kbd">G</span></td><td>Toggle tile grid</td></tr>
+            <tr><td><span class="help-kbd">S</span></td><td>Save all pending labels</td></tr>
+            <tr><td><span class="help-kbd">Enter</span></td><td>Mark complete &amp; return to queue</td></tr>
+            <tr><td><span class="help-kbd">1</span>–<span class="help-kbd">9</span></td><td>Select class by key number</td></tr>
+            <tr><td><span class="help-kbd">0</span></td><td>Other class prompt (when class picker is open)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="help-section" id="export">
+        <h2>Export Formats</h2>
+        <p>Both the Admin and Worker portals offer export of labels and image footprints with optional filtering by group, class, and (for workers) by own labels.</p>
+        <table style="margin-top:.75rem;">
+          <thead><tr><th>Format</th><th>Extension</th><th>Use Case</th></tr></thead>
+          <tbody>
+            <tr><td>GeoJSON</td><td>.geojson</td><td>Web mapping, QGIS, universal</td></tr>
+            <tr><td>Shapefile</td><td>.zip</td><td>ArcGIS, QGIS, legacy workflows</td></tr>
+            <tr><td>GeoPackage</td><td>.gpkg</td><td>QGIS, single-file, open standard</td></tr>
+            <tr><td>GeoParquet</td><td>.parquet</td><td>Big data / ML pipelines, pandas/geopandas</td></tr>
+            <tr><td>CSV (WKT)</td><td>.csv</td><td>Tabular analysis, spreadsheets</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:.75rem;"><strong>Image Footprints</strong> export the bounding boxes of images with a summary of which classes appear in each image — useful for scene-level filtering and dataset inventories.</p>
+      </div>
+
+      <div class="help-section" id="setup">
+        <h2>Setup &amp; Installation</h2>
+        <pre style="background:var(--gray-900);color:var(--ice-200);padding:1rem;border-radius:var(--radius);font-family:var(--font-mono);font-size:.8rem;overflow-x:auto;line-height:1.8;"># 1. Create a virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Run the server
+python app.py
+
+# Admin:  http://localhost:5000/admin
+# Worker: http://localhost:5000/worker
+# Default admin token: awi-admin-2024</pre>
+        <p style="margin-top:.75rem;font-size:.85rem;color:var(--gray-600);">For network access, replace <code>localhost</code> with the server's LAN IP address. Workers connect from any browser on the same network.</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

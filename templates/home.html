@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ cfg.app_name }} · AWI Permafrost Remote Sensing{% endblock %}
+{% block body %}
+<div class="home-wrap">
+  <div style="text-align:center;">
+    <div style="width:64px;height:64px;background:linear-gradient(135deg,#163058 0%,#7abfdc 100%);border-radius:16px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:#fff;letter-spacing:.06em;margin-bottom:1.25rem;">AWI</div>
+  </div>
+  <div class="home-title">{{ cfg.app_name }}</div>
+  <div class="home-sub">{{ cfg.app_subtitle }}</div>
+  <div class="home-cards">
+    <a href="/worker" class="home-card">
+      <div class="home-card-icon">🛰️</div>
+      <div class="home-card-title">Worker Portal</div>
+      <div class="home-card-desc">Label remote sensing imagery</div>
+    </a>
+    <a href="/admin" class="home-card">
+      <div class="home-card-icon">⚙️</div>
+      <div class="home-card-title">Admin Portal</div>
+      <div class="home-card-desc">Upload, configure, export</div>
+    </a>
+  </div>
+  <a href="/help" style="color:var(--ice-400);font-size:.82rem;margin-top:.5rem;">Documentation & Help →</a>
+  <div class="home-org">{{ cfg.organization }}</div>
+</div>
+{% endblock %}

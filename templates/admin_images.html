@@ -1,0 +1,60 @@
+{% extends "admin_base.html" %}
+{% block title %}Images · {{ cfg.app_name }}{% endblock %}
+{% block content %}
+<div class="section-header">
+  <div class="section-title">Images</div>
+  <div style="display:flex;gap:.5rem;align-items:center;">
+    <select class="form-control" style="width:200px;" onchange="location='?group_id='+this.value">
+      <option value="">All Groups</option>
+      {% for g in groups %}
+      <option value="{{ g.id }}" {% if selected_group == g.id|string %}selected{% endif %}>{{ g.name }}</option>
+      {% endfor %}
+    </select>
+    <a href="/admin/upload" class="btn btn-primary btn-sm">Upload More</a>
+  </div>
+</div>
+{% if images %}
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Preview</th><th>Filename</th><th>Group</th><th>Size</th><th>Bands</th><th>Resolution</th><th>Labels</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  {% for img in images %}
+  <tr>
+    <td>
+      {% if img.preview_path %}
+        <img src="/api/image/{{ img.id }}/preview" class="img-thumb" alt="{{ img.original_filename }}">
+      {% else %}
+        <div class="img-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--gray-400);">🛰</div>
+      {% endif %}
+    </td>
+    <td>
+      <strong style="font-size:.85rem;">{{ img.original_filename }}</strong><br>
+      <span class="text-mono" style="font-size:.7rem;color:var(--gray-500);">{{ img.crs or 'Unknown CRS' }}</span>
+    </td>
+    <td><span class="badge badge-ice">{{ img.group_name or '—' }}</span></td>
+    <td class="font-mono" style="font-size:.78rem;">{{ img.width }}×{{ img.height }}</td>
+    <td class="font-mono" style="font-size:.78rem;">{{ img.band_count }}</td>
+    <td class="font-mono" style="font-size:.75rem;">{{ '%.2f'|format(img.resolution_x or 0) }}m</td>
+    <td class="font-mono">{{ img.label_count }}</td>
+    <td><span class="badge badge-{{ img.status }}">{{ img.status }}</span></td>
+    <td>
+      <div style="display:flex;gap:.3rem;">
+        {% if img.status in ['done', 'in_progress'] %}
+        <form method="POST" action="/admin/images/{{ img.id }}/reopen" style="display:inline;">
+          <button class="btn btn-ghost btn-sm">Reopen</button>
+        </form>
+        {% endif %}
+        <form method="POST" action="/admin/images/{{ img.id }}/delete" style="display:inline;" onsubmit="return confirm('Delete image and all its labels?')">
+          <button class="btn btn-danger btn-sm">Delete</button>
+        </form>
+      </div>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="empty-state"><div class="empty-state-icon">🛰️</div>No images found<br><a href="/admin/upload" class="btn btn-primary mt-2">Upload Images</a></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Image Queue · {{ cfg.app_name }}{% endblock %}
+{% block body %}
+<!-- Top Bar (worker variant) -->
+<header class="topbar">
+  <div class="topbar-brand">
+    {% if cfg.logo_url %}
+      <img src="{{ cfg.logo_url }}" class="topbar-logo">
+    {% else %}
+      <div class="topbar-logo-placeholder">AWI</div>
+    {% endif %}
+    <div>
+      <div class="topbar-name">{{ cfg.app_name }}</div>
+      <div class="topbar-sub">{{ cfg.organization }}</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-badge">
+      <svg width="10" height="10" viewBox="0 0 10 10" style="display:inline;margin-right:3px"><circle cx="5" cy="5" r="4" fill="#f59e0b"/></svg>
+      {{ worker }}
+    </span>
+    <div class="topbar-divider"></div>
+    <a href="/worker/free" style="color:var(--ice-200);font-size:.8rem;">🗺 Free Labelling</a>
+    <div class="topbar-divider"></div>
+    <a href="/worker/export" style="color:var(--ice-200);font-size:.8rem;">Export</a>
+    <div class="topbar-divider"></div>
+    <a href="/help" style="color:var(--ice-200);font-size:.8rem;" target="_blank">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Help
+    </a>
+    <div class="topbar-divider"></div>
+    <a href="/worker/logout" style="color:var(--ice-200);font-size:.8rem;">Change name</a>
+  </div>
+</header>
+
+<div style="padding:2rem;max-width:1400px;margin:0 auto;">
+  <div class="card" style="margin-bottom:1.25rem;background:linear-gradient(135deg,rgba(8,23,46,.92) 0%,rgba(23,53,96,.72) 100%);border-color:rgba(122,191,220,.18);">
+    <div class="card-body" style="display:flex;align-items:center;gap:1.1rem;padding:1.1rem 1.35rem;">
+      <div style="font-size:1.9rem;flex-shrink:0;">🗺️</div>
+      <div style="flex:1;">
+        <div style="font-family:var(--f-display);font-size:.95rem;font-weight:700;color:#fff;margin-bottom:.2rem;">Free Labelling Mode</div>
+        <div style="font-size:.78rem;color:rgba(208,234,245,.55);line-height:1.5;">Annotate directly on satellite basemaps without a GeoTIFF upload. Labels are stored with worker, class, geometry, and basemap provenance.</div>
+      </div>
+      <a href="/worker/free" class="btn btn-primary" style="flex-shrink:0;background:linear-gradient(135deg,var(--mid),var(--ice-600));border-color:rgba(122,191,220,.25);">
+        Open Free Labelling →
+      </a>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:1.25rem;">
+    <div class="card-header">
+      <span style="font-weight:600;font-size:.9rem;">Leaderboard</span>
+      <span class="text-muted" style="margin-left:auto;font-size:.75rem;">Ranked by labels</span>
+    </div>
+    <div class="card-body" style="padding:0;">
+      {% if leaderboard %}
+      <table>
+        <thead><tr><th>Worker</th><th>Images Done</th><th>Labels</th><th>Last Active</th></tr></thead>
+        <tbody>
+        {% for w in leaderboard %}
+        <tr {% if w.worker_name == worker %}style="background:rgba(122,191,220,.12);"{% endif %}>
+          <td><strong>{{ w.worker_name }}</strong></td>
+          <td class="font-mono">{{ w.image_count }}</td>
+          <td class="font-mono">{{ w.label_count }}</td>
+          <td class="text-muted font-mono" style="font-size:.75rem;">{{ w.last_active[:10] if w.last_active else '—' }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state" style="padding:1.5rem 1rem;"><div class="empty-state-icon">🏁</div>No leaderboard data yet</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="section-header">
+    <div class="section-title">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      Available Images
+    </div>
+    <div style="display:flex;gap:.5rem;align-items:center;">
+      <select class="form-control" style="width:200px;" onchange="location='?group_id='+this.value">
+        <option value="">All Groups</option>
+        {% for g in groups %}
+        <option value="{{ g.id }}" {% if selected_group == g.id|string %}selected{% endif %}>{{ g.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  {% if images %}
+  <div class="queue-grid">
+    {% for img in images %}
+    <div class="img-card">
+      {% if img.preview_path %}
+        <img src="/api/image/{{ img.id }}/preview" class="img-card-thumb" alt="{{ img.original_filename }}" loading="lazy">
+      {% else %}
+        <div class="img-card-thumb" style="display:flex;align-items:center;justify-content:center;background:var(--gray-100);color:var(--gray-400);font-size:2rem;">🛰</div>
+      {% endif %}
+      <div class="img-card-body">
+        <div class="img-card-name" title="{{ img.original_filename }}">{{ img.original_filename }}</div>
+        <div class="img-card-meta">
+          {{ img.group_name or 'No group' }} ·
+          {{ img.band_count }}B ·
+          {{ img.width }}×{{ img.height }}px
+          {% if img.resolution_x %} · {{ '%.1f'|format(img.resolution_x) }}m/px{% endif %}
+        </div>
+        <div style="margin-top:.6rem;display:flex;gap:.4rem;justify-content:space-between;align-items:center;">
+          <span>
+            {% if img.label_count > 0 %}
+            <span class="badge badge-ice">{{ img.label_count }} label{{ 's' if img.label_count != 1 }}</span>
+            {% endif %}
+          </span>
+          <a href="/worker/label/{{ img.id }}" class="btn btn-primary btn-sm">
+            Label →
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state" style="margin-top:4rem;">
+    <div class="empty-state-icon">✅</div>
+    <div style="font-size:1rem;font-weight:500;margin-bottom:.5rem;">No images available</div>
+    <div class="text-muted">All images have been labelled, or no images have been uploaded yet.</div>
+    <div style="margin-top:1rem;"><a href="/worker/free" class="btn btn-primary">Try Free Labelling instead →</a></div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

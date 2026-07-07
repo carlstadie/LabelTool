@@ -1,0 +1,144 @@
+{% extends "admin_base.html" %}
+{% block title %}Export · {{ cfg.app_name }}{% endblock %}
+{% block content %}
+<div class="section-header">
+  <div class="section-title">Export Labels &amp; Footprints</div>
+</div>
+
+<div style="display:grid;grid-template-columns:320px 1fr;gap:1.5rem;align-items:start;">
+
+  <!-- Export Panel -->
+  <div class="card">
+    <div class="card-header"><span style="font-weight:600;">Export Options</span></div>
+    <div class="card-body">
+      <form method="POST" action="/admin/export/download">
+        <div class="form-group">
+          <label class="form-label">Export Type</label>
+          <select name="export_type" class="form-control" id="export-type-sel">
+            <option value="labels">Labels (geometries)</option>
+            <option value="footprints">Image Footprints</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Format</label>
+          <select name="format" class="form-control">
+            <option value="geojson">GeoJSON</option>
+            <option value="shapefile">Shapefile (.zip)</option>
+            <option value="gpkg">GeoPackage (.gpkg)</option>
+            <option value="geoparquet">GeoParquet</option>
+            <option value="csv">CSV (WKT)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Filter by Group</label>
+          <select name="group_id" class="form-control">
+            <option value="">All Groups</option>
+            {% for g in groups %}
+            <option value="{{ g.id }}">{{ g.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Filter by Class</label>
+          <select name="class_id" class="form-control">
+            <option value="">All Classes</option>
+            {% for c in classes %}
+            <option value="{{ c.id }}">{{ c.number }}. {{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download Export
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Map Preview -->
+  <div class="card">
+    <div class="card-header">
+      <span style="font-weight:600;">Map Preview</span>
+      <div style="margin-left:auto;display:flex;gap:.5rem;align-items:center;">
+        <select class="form-control" style="width:160px;" id="map-group-filter">
+          <option value="">All Groups</option>
+          {% for g in groups %}
+          <option value="{{ g.id }}">{{ g.name }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="loadMapData()">Refresh</button>
+      </div>
+    </div>
+    <div id="export-map"></div>
+    <div style="padding:.75rem 1rem;font-size:.78rem;color:var(--gray-500);display:flex;gap:1rem;">
+      <span>🔷 Labels</span>
+      <span>🟦 Footprints</span>
+      <span id="map-counts"></span>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let exportMap;
+let labelsLayer;
+let footprintLayer;
+
+function initExportMap() {
+  if (exportMap) return;
+  exportMap = L.map('export-map', { scrollWheelZoom: true }).setView([70, 100], 3);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap', maxZoom: 19, opacity: 0.5
+  }).addTo(exportMap);
+
+  labelsLayer = L.geoJSON(null, {
+    style: f => ({ color: f.properties.class_color || '#4A90D9', weight: 2, fillOpacity: 0.3 }),
+    onEachFeature: (f, l) => l.bindPopup(`<strong>${f.properties.class_name || 'Unknown'}</strong><br>Worker: ${f.properties.worker || ''}<br>Image: ${f.properties.image || ''}`)
+  }).addTo(exportMap);
+
+  footprintLayer = L.geoJSON(null, {
+    style: { color: '#003F87', weight: 1.5, fillOpacity: 0.05, dashArray: '4 4' },
+    onEachFeature: (f, l) => l.bindPopup(`<strong>${f.properties.filename || ''}</strong><br>Labels: ${f.properties.label_count || 0}<br>Classes: ${f.properties.classes || ''}`)
+  }).addTo(exportMap);
+
+  setTimeout(() => exportMap.invalidateSize(), 50);
+}
+
+async function loadMapData() {
+  initExportMap();
+  const gid = document.getElementById('map-group-filter').value;
+  const qs = gid ? '?group_id=' + gid : '';
+
+  try {
+    const [labelsRes, fptRes] = await Promise.all([
+      fetch('/api/labels/geojson' + qs),
+      fetch('/api/footprints/geojson' + qs),
+    ]);
+    const labelsData = await labelsRes.json();
+    const fptData = await fptRes.json();
+
+    labelsLayer.clearLayers();
+    footprintLayer.clearLayers();
+    if (labelsData.features && labelsData.features.length) labelsLayer.addData(labelsData);
+    if (fptData.features && fptData.features.length) {
+      footprintLayer.addData(fptData);
+      const b = footprintLayer.getBounds();
+      if (b.isValid()) exportMap.fitBounds(b, { padding: [30, 30] });
+    }
+    document.getElementById('map-counts').textContent =
+      `${(labelsData.features && labelsData.features.length) || 0} labels · ${(fptData.features && fptData.features.length) || 0} footprints`;
+  } catch (err) {
+    console.error('Failed loading export preview:', err);
+    document.getElementById('map-counts').textContent = 'Preview failed to load';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const groupFilter = document.getElementById('map-group-filter');
+  if (groupFilter) groupFilter.addEventListener('change', loadMapData);
+  loadMapData();
+});
+</script>
+{% endblock %}

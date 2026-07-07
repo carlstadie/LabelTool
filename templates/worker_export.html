@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Export · {{ cfg.app_name }}{% endblock %}
+{% block body %}
+<header class="topbar">
+  <div class="topbar-brand">
+    {% if cfg.logo_url %}
+      <img src="{{ cfg.logo_url }}" class="topbar-logo" alt="Logo">
+    {% else %}
+      <div class="topbar-logo-placeholder">AWI</div>
+    {% endif %}
+    <div><div class="topbar-name">{{ cfg.app_name }}</div><div class="topbar-sub">{{ cfg.organization }}</div></div>
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-badge">{{ worker }}</span>
+    <a href="/worker/queue" style="color:var(--ice-200);font-size:.8rem;">← Queue</a>
+    <a href="/help" style="color:var(--ice-200);font-size:.8rem;" target="_blank">Help</a>
+  </div>
+</header>
+<div style="padding:2rem;max-width:1200px;margin:0 auto;">
+  <div class="section-header">
+    <div class="section-title">Export My Labels</div>
+  </div>
+  <div style="display:grid;grid-template-columns:300px 1fr;gap:1.5rem;align-items:start;">
+    <div class="card">
+      <div class="card-header"><span style="font-weight:600;">Export Options</span></div>
+      <div class="card-body">
+        <form method="POST" action="/worker/export/download">
+          <div class="form-group">
+            <label class="form-label">Export Type</label>
+            <select name="export_type" class="form-control">
+              <option value="labels">My Labels</option>
+              <option value="footprints">Image Footprints</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Format</label>
+            <select name="format" class="form-control">
+              <option value="geojson">GeoJSON</option>
+              <option value="shapefile">Shapefile (.zip)</option>
+              <option value="gpkg">GeoPackage (.gpkg)</option>
+              <option value="geoparquet">GeoParquet</option>
+              <option value="csv">CSV (WKT)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Filter by Group</label>
+            <select name="group_id" class="form-control">
+              <option value="">All Groups</option>
+              {% for g in groups %}<option value="{{ g.id }}">{{ g.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Filter by Class</label>
+            <select name="class_id" class="form-control">
+              <option value="">All Classes</option>
+              {% for c in classes %}<option value="{{ c.id }}">{{ c.number }}. {{ c.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;">Download Export</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span style="font-weight:600;">Map Preview — My Labels</span>
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="loadMap()">Refresh</button>
+      </div>
+      <div id="export-map" style="height:400px;"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const myWorker = {{ worker|tojson }};
+let exportMap;
+let lyr;
+
+function initWorkerExportMap() {
+  if (exportMap) return;
+  exportMap = L.map('export-map', { scrollWheelZoom: true }).setView([70, 100], 3);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    opacity: 0.5,
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+  }).addTo(exportMap);
+  lyr = L.geoJSON(null, {
+    style: f => ({ color: f.properties.class_color || '#4A90D9', weight: 2, fillOpacity: 0.3 }),
+    onEachFeature: (f, l) => l.bindPopup(`<b>${f.properties.class_name || 'Unknown'}</b><br>${f.properties.image || ''}`)
+  }).addTo(exportMap);
+
+  setTimeout(() => exportMap.invalidateSize(), 50);
+}
+
+async function loadMap() {
+  initWorkerExportMap();
+  try {
+    lyr.clearLayers();
+    const res = await fetch('/api/labels/geojson?worker=' + encodeURIComponent(myWorker));
+    const d = await res.json();
+    if (d.features && d.features.length) {
+      lyr.addData(d);
+      const b = lyr.getBounds();
+      if (b.isValid()) exportMap.fitBounds(b, { padding: [20, 20] });
+    }
+  } catch (err) {
+    console.error('Failed loading worker export preview:', err);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadMap);
+</script>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "admin_base.html" %}
+{% block title %}Groups · {{ cfg.app_name }}{% endblock %}
+{% block content %}
+<div class="section-header">
+  <div class="section-title">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    Image Groups
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:360px 1fr;gap:1.5rem;align-items:start;">
+  <!-- Create Form -->
+  <div class="card">
+    <div class="card-header"><span style="font-weight:600;">Create Group</span></div>
+    <div class="card-body">
+      <form method="POST">
+        <input type="hidden" name="action" value="create">
+        <div class="form-group">
+          <label class="form-label">Group Name *</label>
+          <input type="text" name="name" class="form-control" required placeholder="e.g. Siberia 2023">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select name="type" class="form-control">
+            <option value="project">Project</option>
+            <option value="region">Region</option>
+            <option value="sensor">Sensor</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-control" rows="2" placeholder="Optional description"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Create Group</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Groups Table -->
+  <div class="card">
+    <div class="card-body" style="padding:0;">
+      {% if groups %}
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Images</th><th>Created</th><th></th></tr></thead>
+        <tbody>
+        {% for g in groups %}
+        <tr>
+          <td><strong>{{ g.name }}</strong><br><small>{{ g.description or '' }}</small></td>
+          <td><span class="badge badge-ice">{{ g.type }}</span></td>
+          <td class="font-mono">{{ g.image_count }}</td>
+          <td class="text-muted font-mono" style="font-size:.75rem;">{{ g.created_at[:10] }}</td>
+          <td>
+            <form method="POST" style="display:inline;" onsubmit="return confirm('Delete group (images kept)?')">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="group_id" value="{{ g.id }}">
+              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state"><div class="empty-state-icon">📁</div>No groups yet</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

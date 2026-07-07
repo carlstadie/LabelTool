@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}{{ cfg.app_name }}{% endblock %}</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% block head %}{% endblock %}
+</head>
+<body>
+{% block body %}{% endblock %}
+
+<!-- Flash messages (shown globally via JS) -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div id="flash-container" style="position:fixed;top:80px;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem;max-width:340px;">
+  {% for cat, msg in messages %}
+  <div class="alert alert-{{ cat }}" style="box-shadow:var(--shadow-lg);">{{ msg }}</div>
+  {% endfor %}
+</div>
+<script>
+setTimeout(() => {
+  const el = document.getElementById('flash-container');
+  if (el) el.style.opacity = '0', el.style.transition = 'opacity .5s', setTimeout(() => el.remove(), 500);
+}, 4000);
+</script>
+{% endif %}
+{% endwith %}
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

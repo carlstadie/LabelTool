@@ -1,0 +1,139 @@
+{% extends "admin_base.html" %}
+{% block title %}Upload Images · {{ cfg.app_name }}{% endblock %}
+{% block content %}
+
+<div class="section-header">
+  <div class="section-title">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Upload Images
+  </div>
+</div>
+
+<div style="max-width:720px;">
+  <div class="card">
+    <div class="card-body">
+      <div class="form-group">
+        <label class="form-label">Target Group</label>
+        <select class="form-control" id="group-select">
+          <option value="">— No group —</option>
+          {% for g in groups %}
+          <option value="{{ g.id }}">{{ g.name }} ({{ g.type }})</option>
+          {% endfor %}
+        </select>
+        <div class="form-hint">Assign images to a group. <a href="/admin/groups">Create a new group →</a></div>
+      </div>
+
+      <!-- Drop Zone -->
+      <div class="upload-zone" id="drop-zone">
+        <div class="upload-zone-icon">🛰️</div>
+        <div style="font-size:1rem;font-weight:600;color:var(--navy-700);margin-bottom:.35rem;">
+          Drop GeoTIFF files here
+        </div>
+        <div style="font-size:.85rem;color:var(--gray-500);margin-bottom:1rem;">
+          Supports single-band and multi-band GeoTIFF (.tif, .tiff)<br>
+          Files will be georeferenced automatically from their CRS
+        </div>
+        <input type="file" id="file-input" multiple accept=".tif,.tiff" style="display:none;">
+        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Browse Files
+        </button>
+      </div>
+
+      <!-- File list -->
+      <div id="file-list" style="margin-top:1rem;display:none;">
+        <div style="font-size:.82rem;font-weight:500;color:var(--gray-700);margin-bottom:.5rem;font-family:var(--font-mono);">
+          FILES QUEUED
+        </div>
+        <div id="file-items"></div>
+        <button class="btn btn-primary mt-2" id="upload-btn" onclick="startUpload()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload All
+        </button>
+      </div>
+
+      <!-- Results -->
+      <div id="upload-results" style="margin-top:1rem;"></div>
+    </div>
+  </div>
+
+  <div class="alert alert-info mt-2" style="font-size:.82rem;">
+    <strong>Note:</strong> Large files may take a moment to process — previews are generated on upload.
+    Images without a valid CRS will use EPSG:4326 as fallback.
+  </div>
+</div>
+
+<script>
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+let selectedFiles = [];
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragging'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragging'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragging');
+  addFiles([...e.dataTransfer.files]);
+});
+fileInput.addEventListener('change', () => addFiles([...fileInput.files]));
+
+function addFiles(files) {
+  files.forEach(f => { if (!selectedFiles.find(x => x.name === f.name)) selectedFiles.push(f); });
+  renderFileList();
+}
+
+function renderFileList() {
+  const list = document.getElementById('file-items');
+  const wrap = document.getElementById('file-list');
+  if (!selectedFiles.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = selectedFiles.map((f, i) => `
+    <div id="file-row-${i}" style="display:flex;align-items:center;gap:.75rem;padding:.5rem .75rem;background:var(--gray-50);border-radius:var(--radius);margin-bottom:.35rem;border:1px solid var(--gray-200);">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <span style="flex:1;font-size:.83rem;font-family:var(--font-mono);">${f.name}</span>
+      <span style="font-size:.78rem;color:var(--gray-500);">${(f.size/1024/1024).toFixed(1)} MB</span>
+      <div class="upload-progress" style="width:100px;display:none;" id="prog-${i}"><div class="upload-progress-bar" id="progbar-${i}" style="width:0%"></div></div>
+      <span id="status-${i}" style="font-size:.75rem;"></span>
+      <button onclick="removeFile(${i})" class="btn btn-ghost btn-sm" style="padding:.2rem .4rem;">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeFile(i) {
+  selectedFiles.splice(i, 1);
+  renderFileList();
+}
+
+async function startUpload() {
+  const groupId = document.getElementById('group-select').value;
+  document.getElementById('upload-btn').disabled = true;
+  const results = [];
+  for (let i = 0; i < selectedFiles.length; i++) {
+    const f = selectedFiles[i];
+    document.getElementById(`prog-${i}`).style.display = 'block';
+    document.getElementById(`status-${i}`).textContent = 'Uploading…';
+    const fd = new FormData();
+    fd.append('images', f);
+    if (groupId) fd.append('group_id', groupId);
+    try {
+      const r = await fetch('/admin/upload', { method: 'POST', body: fd });
+      const json = await r.json();
+      const res = json[0];
+      document.getElementById(`progbar-${i}`).style.width = '100%';
+      document.getElementById(`status-${i}`).innerHTML = res.status === 'ok'
+        ? '<span style="color:var(--success)">✓ Done</span>'
+        : `<span style="color:var(--danger)" title="${res.msg}">✗ Error</span>`;
+      results.push(res);
+    } catch(e) {
+      document.getElementById(`status-${i}`).innerHTML = '<span style="color:var(--danger)">✗ Failed</span>';
+    }
+  }
+  const ok = results.filter(r => r.status === 'ok').length;
+  document.getElementById('upload-results').innerHTML =
+    `<div class="alert alert-${ok ? 'success' : 'error'}">${ok} of ${results.length} image(s) uploaded successfully. <a href="/admin/images">View images →</a></div>`;
+  document.getElementById('upload-btn').disabled = false;
+  selectedFiles = selectedFiles.filter((_, i) => results[i]?.status !== 'ok');
+  renderFileList();
+}
+</script>
+{% endblock %}

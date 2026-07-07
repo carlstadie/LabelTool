@@ -1,0 +1,113 @@
+{% extends "admin_base.html" %}
+{% block title %}Label Classes · {{ cfg.app_name }}{% endblock %}
+{% block content %}
+<div class="section-header">
+  <div class="section-title">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Label Classes
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:380px 1fr;gap:1.5rem;align-items:start;">
+  <!-- Create / Edit -->
+  <div class="card" id="class-form-card">
+    <div class="card-header"><span style="font-weight:600;" id="form-title">Add Class</span></div>
+    <div class="card-body">
+      <form method="POST" id="class-form">
+        <input type="hidden" name="action" value="create" id="form-action">
+        <input type="hidden" name="class_id" id="form-class-id">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Key Number (1–9) *</label>
+            <input type="number" name="number" class="form-control" required min="1" max="9" id="form-number">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Color</label>
+            <input type="color" name="color" class="form-control" value="#4A90D9" id="form-color">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Class Name *</label>
+          <input type="text" name="name" class="form-control" required placeholder="e.g. Thermokarst Lake" id="form-name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-control" rows="2" placeholder="Optional description" id="form-desc"></textarea>
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:.5rem;">
+          <input type="checkbox" name="active" id="form-active" checked style="width:auto;">
+          <label for="form-active" class="form-label" style="margin:0;">Active (visible to workers)</label>
+        </div>
+        <div style="display:flex;gap:.5rem;">
+          <button type="submit" class="btn btn-primary">Save Class</button>
+          <button type="button" class="btn btn-ghost" onclick="resetForm()">Reset</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Classes Table -->
+  <div class="card">
+    <div class="card-body" style="padding:0;">
+      {% if classes %}
+      <table>
+        <thead><tr><th>Key</th><th>Class</th><th>Color</th><th>Active</th><th>Description</th><th></th></tr></thead>
+        <tbody>
+        {% for c in classes %}
+        <tr>
+          <td>
+            <span class="class-key">{{ c.number }}</span>
+          </td>
+          <td><strong>{{ c.name }}</strong></td>
+          <td>
+            <span style="display:inline-flex;align-items:center;gap:.4rem;">
+              <span style="width:16px;height:16px;border-radius:4px;background:{{ c.color }};border:1px solid rgba(0,0,0,.1);display:inline-block;"></span>
+              <span class="font-mono" style="font-size:.75rem;">{{ c.color }}</span>
+            </span>
+          </td>
+          <td>
+            {% if c.active %}<span class="badge badge-available">Yes</span>
+            {% else %}<span class="badge" style="background:var(--gray-100);color:var(--gray-500);">No</span>{% endif %}
+          </td>
+          <td class="text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ c.description or '—' }}</td>
+          <td>
+            <div style="display:flex;gap:.35rem;">
+              <button class="btn btn-ghost btn-sm" onclick='editClass({{ c|tojson }})'>Edit</button>
+              <form method="POST" style="display:inline;" onsubmit="return confirm('Delete class?')">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="class_id" value="{{ c.id }}">
+                <button type="submit" class="btn btn-danger btn-sm">Del</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state"><div class="empty-state-icon">🏷️</div>No classes defined</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+function editClass(c) {
+  document.getElementById('form-action').value = 'update';
+  document.getElementById('form-class-id').value = c.id;
+  document.getElementById('form-number').value = c.number;
+  document.getElementById('form-name').value = c.name;
+  document.getElementById('form-color').value = c.color;
+  document.getElementById('form-desc').value = c.description || '';
+  document.getElementById('form-active').checked = c.active;
+  document.getElementById('form-title').textContent = 'Edit Class';
+  document.getElementById('class-form-card').scrollIntoView({behavior:'smooth'});
+}
+function resetForm() {
+  document.getElementById('form-action').value = 'create';
+  document.getElementById('form-class-id').value = '';
+  document.getElementById('form-title').textContent = 'Add Class';
+  document.getElementById('class-form').reset();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}Free Labelling · {{ cfg.app_name }}{% endblock %}
+{% block head %}
+<style>
+  body,html{height:100%;overflow:hidden;}
+
+  .bm-panel{
+    position:absolute;top:10px;right:10px;width:268px;
+    background:rgba(8,23,46,.97);border:1px solid rgba(122,191,220,.18);
+    border-radius:var(--r-lg);backdrop-filter:blur(16px);
+    box-shadow:var(--sh-xl);z-index:1000;overflow:hidden;
+    transition:opacity .18s,transform .18s;
+  }
+  .bm-panel.hidden{opacity:0;pointer-events:none;transform:translateY(-6px) scale(.98);}
+  .bm-panel-hd{
+    padding:.6rem .9rem;border-bottom:1px solid rgba(122,191,220,.1);
+    font-size:.56rem;font-family:var(--f-mono);letter-spacing:.13em;text-transform:uppercase;
+    color:rgba(122,191,220,.45);display:flex;align-items:center;justify-content:space-between;
+  }
+  .bm-panel-close{cursor:pointer;color:rgba(122,191,220,.38);font-size:.82rem;}
+  .bm-panel-close:hover{color:var(--ice-200);}
+  .bm-list{padding:.35rem;max-height:65vh;overflow-y:auto;}
+  .bm-section-label{padding:.3rem .65rem;font-size:.5rem;font-family:var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:rgba(122,191,220,.28);}
+  .bm-item{
+    display:flex;align-items:center;gap:.55rem;padding:.46rem .6rem;
+    border-radius:var(--r-sm);cursor:pointer;border:1px solid transparent;margin-bottom:.15rem;
+    transition:all var(--ease);
+  }
+  .bm-item:hover{background:rgba(122,191,220,.07);}
+  .bm-item.active{background:rgba(122,191,220,.13);border-color:rgba(122,191,220,.32);}
+  .bm-thumb{
+    width:42px;height:30px;border-radius:5px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:.95rem;
+    border:1px solid rgba(255,255,255,.08);
+  }
+  .bm-info{flex:1;min-width:0;}
+  .bm-name{font-size:.74rem;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bm-item.active .bm-name{color:var(--ice-200);}
+  .bm-desc{font-size:.6rem;color:rgba(208,234,245,.4);line-height:1.4;}
+  .bm-stars .on{color:var(--flare);}
+  .bm-stars .off{color:rgba(255,255,255,.13);}
+  .bm-note{font-size:.58rem;color:var(--flare);margin-top:.05rem;}
+
+  .goto-panel{
+    position:absolute;top:10px;left:50%;transform:translateX(-50%);
+    background:rgba(8,23,46,.97);border:1px solid rgba(122,191,220,.18);
+    border-radius:var(--r-md);backdrop-filter:blur(16px);box-shadow:var(--sh-lg);
+    z-index:1000;padding:.5rem .65rem;display:flex;align-items:center;gap:.42rem;
+    transition:opacity .18s;
+  }
+  .goto-panel.hidden{opacity:0;pointer-events:none;}
+  .goto-input{
+    background:rgba(255,255,255,.07);border:1px solid rgba(122,191,220,.18);
+    border-radius:5px;color:#fff;font-family:var(--f-mono);font-size:.7rem;
+    padding:.28rem .45rem;width:90px;
+  }
+  .goto-input::placeholder{color:rgba(122,191,220,.28);}
+  .goto-input:focus{outline:none;border-color:var(--ice-400);}
+  .goto-label{font-size:.55rem;color:rgba(122,191,220,.38);font-family:var(--f-mono);}
+  .goto-btn{background:rgba(122,191,220,.14);border:1px solid rgba(122,191,220,.28);color:var(--ice-200);border-radius:5px;padding:.26rem .55rem;font-size:.68rem;cursor:pointer;}
+  .goto-btn:hover{background:rgba(122,191,220,.24);color:#fff;}
+  .goto-close{color:rgba(122,191,220,.35);cursor:pointer;font-size:.78rem;margin-left:.15rem;}
+  .goto-close:hover{color:var(--ice-200);}
+
+  .session-input{
+    background:rgba(255,255,255,.05);border:1px solid rgba(122,191,220,.14);
+    border-radius:var(--r-xs);color:var(--ice-200);font-family:var(--f-mono);
+    font-size:.68rem;padding:.2rem .48rem;width:175px;
+  }
+  .session-input:focus{outline:none;border-color:var(--ice-400);color:#fff;}
+  .session-input::placeholder{color:rgba(122,191,220,.25);}
+
+  .zoom-badge{
+    position:absolute;bottom:30px;right:10px;background:rgba(8,23,46,.85);
+    border:1px solid rgba(122,191,220,.14);border-radius:6px;backdrop-filter:blur(8px);
+    padding:.28rem .55rem;font-family:var(--f-mono);font-size:.62rem;color:var(--ice-300);
+    z-index:900;pointer-events:none;
+  }
+  .zoom-badge span{color:#fff;font-weight:600;}
+</style>
+{% endblock %}
+{% block body %}
+<div class="label-shell">
+
+  <div class="ribbon">
+    <a href="/worker/queue" class="tool-btn" onclick="return confirmLeave()" title="Back to queue">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Queue
+    </a>
+    <div class="ribbon-sep"></div>
+    <span class="ribbon-label">Draw</span>
+    <button class="tool-btn active" id="btn-cursor" onclick="setMode('cursor')" title="Cursor / Pan (Esc)">
+      <svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M4 0l16 12-8 2-5 9z" opacity=".9"/></svg>
+      Cursor
+    </button>
+    <button class="tool-btn" id="btn-rectangle" onclick="setMode('rectangle')" title="Rectangle (R)">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"/></svg>
+      Rectangle
+    </button>
+    <button class="tool-btn" id="btn-point" onclick="setMode('point')" title="Point (O)">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/></svg>
+      Point
+    </button>
+    <button class="tool-btn" id="btn-stream" onclick="setMode('stream')" title="Stream Digitising (T, hold left mouse, right-click to close)">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 17c3-6 5-6 8 0s5 6 8 0"/></svg>
+      Stream
+    </button>
+    <button class="tool-btn" id="btn-polygon" onclick="setMode('polygon')" title="Polygon (P, right-click to close)">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 22 9 18 21 6 21 2 9"/></svg>
+      Polygon
+    </button>
+    <button class="tool-btn" id="btn-delete" onclick="deleteSelected()" title="Delete selected (D)">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+      Delete
+    </button>
+    <div class="ribbon-sep"></div>
+    <button class="tool-btn" id="btn-basemap" onclick="toggleBasemapPanel()" title="Switch basemap (B)">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      <span id="current-bm-name">Esri Imagery</span>
+    </button>
+    <button class="tool-btn" id="btn-goto" onclick="toggleGoto()" title="Go to coordinates (G)">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      Go to
+    </button>
+    <div class="ribbon-sep"></div>
+    <span class="ribbon-label">Session</span>
+    <input class="session-input" id="session-name" placeholder="Session name…" value="Free Session {{ now }}">
+    <div class="ribbon-spacer"></div>
+    <button class="tool-btn" id="btn-save" onclick="saveAllPending()" title="Save (S)">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Save
+    </button>
+    <button class="tool-btn" id="btn-finish" onclick="finishSession()" style="color:#10b981;" title="Save and return to queue">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      Finish
+    </button>
+    <a href="/help#labelling" class="tool-btn" target="_blank" title="Help">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </a>
+  </div>
+
+  <div class="label-body">
+    <div class="class-panel">
+      <div class="class-panel-header">
+        Classes
+        <span style="font-size:.65rem;color:var(--navy-600);">press key 0–9 (0 = Other)</span>
+      </div>
+      <div class="class-list" id="class-list">
+        {% for c in classes %}
+        <div class="class-item" id="class-item-{{ c.id }}" onclick="selectClass({{ c.id }})" title="{{ c.description or c.name }}">
+          <div class="class-swatch" style="background:{{ c.color }};"></div>
+          <div class="class-name">{{ c.name }}</div>
+          <div class="class-num-key">{{ c.number }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="label-count-bar">
+        <div class="label-count-row"><span>Saved</span><span class="label-count-num" id="saved-count">0</span></div>
+        <div class="label-count-row"><span>Unsaved</span><span class="label-count-num label-count-unsaved" id="unsaved-count">0</span></div>
+        <div class="label-count-row" style="margin-top:.35rem;border-top:1px solid rgba(122,191,220,.07);padding-top:.35rem;">
+          <span style="font-size:.6rem;opacity:.6;">Session</span>
+          <span class="label-count-num" id="session-id-display" style="font-size:.6rem;color:rgba(122,191,220,.4);">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="position:relative;overflow:hidden;height:100%;min-height:0;">
+      <div id="map"></div>
+
+      <div class="bm-panel hidden" id="bm-panel">
+        <div class="bm-panel-hd">
+          Basemap · Arctic Resolution
+          <span class="bm-panel-close" onclick="toggleBasemapPanel()">✕</span>
+        </div>
+        <div class="bm-list" id="bm-list"></div>
+      </div>
+
+      <div class="goto-panel hidden" id="goto-panel">
+        <span class="goto-label">Lat</span>
+        <input class="goto-input" id="goto-lat" placeholder="71.234">
+        <span class="goto-label">Lon</span>
+        <input class="goto-input" id="goto-lon" placeholder="129.456">
+        <span class="goto-label">Zoom</span>
+        <input class="goto-input" id="goto-zoom" placeholder="12" value="12" style="width:50px;">
+        <button class="goto-btn" onclick="gotoCoords()">Go</button>
+        <span class="goto-close" onclick="toggleGoto()">✕</span>
+      </div>
+
+      <div class="zoom-badge">Zoom <span id="zoom-val">5</span> · <span id="res-val">—</span></div>
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <div class="statusbar-item">🗺 <span class="statusbar-val" id="sb-basemap">Esri World Imagery</span></div>
+    <div class="statusbar-sep">|</div>
+    <div class="statusbar-item">Lat:<span class="statusbar-val" id="sb-lat">—</span></div>
+    <div class="statusbar-item">Lon:<span class="statusbar-val" id="sb-lon">—</span></div>
+    <div class="statusbar-sep">|</div>
+    <div class="statusbar-item">Zoom:<span class="statusbar-val" id="sb-zoom">—</span></div>
+    <div class="statusbar-item">Mode:<span class="statusbar-val" id="sb-mode">cursor</span></div>
+    <div class="statusbar-sep">|</div>
+    <div class="statusbar-item">Worker:<span class="statusbar-val">{{ worker }}</span></div>
+  </div>
+</div>
+
+<div id="class-picker-overlay" class="class-picker-overlay" style="display:none;">
+  <div class="class-picker">
+    <div class="class-picker-title">Assign class — or press its number key</div>
+    <div class="class-picker-list">
+      {% for c in classes %}
+      <div class="class-picker-item" onclick="assignClass({{ c.id }})">
+        <div style="width:12px;height:12px;border-radius:3px;background:{{ c.color }};"></div>
+        <div style="flex:1;color:var(--ice-100);font-size:.88rem;">{{ c.name }}</div>
+        <div class="class-num-key">{{ c.number }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:.75rem;color:var(--ice-200);" onclick="cancelPending()">
+      Cancel (Esc)
+    </button>
+  </div>
+</div>
+
+<script>
+const WORKER_NAME = {{ worker|tojson }};
+const CLASSES     = {{ classes|tojson }};
+let SESSION_IMAGE_ID = null;
+</script>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/free_label.js"></script>
+{% endblock %}

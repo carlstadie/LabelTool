@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Worker Login · {{ cfg.app_name }}{% endblock %}
+{% block body %}
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo-wrap">
+      {% if cfg.logo_url %}
+        <img src="{{ cfg.logo_url }}" style="height:48px;margin-bottom:.75rem;display:block;margin-left:auto;margin-right:auto;">
+      {% else %}
+        <div class="login-logo-box">AWI</div>
+      {% endif %}
+      <div class="login-title">{{ cfg.app_name }}</div>
+      <div class="login-sub">Worker Portal</div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}" style="margin-bottom:1rem;">{{ msg }}</div>
+    {% endfor %}
+    {% endwith %}
+
+    <form method="POST" action="/worker/login">
+      <div class="form-group">
+        <label class="form-label">Your Name</label>
+        <input type="text" name="name" class="form-control" placeholder="e.g. Spock"
+               required autofocus autocomplete="name">
+        <div class="form-hint" style="color:var(--navy-400);">Your name will be recorded with each label you create.</div>
+      </div>
+      <button type="submit" class="btn btn-primary">Start Labelling</button>
+    </form>
+
+    <div class="login-org" style="margin-top:1.25rem;">
+      {{ cfg.organization }}<br>
+      <a href="/admin" style="color:var(--navy-400);">Admin Portal</a>
+      &nbsp;·&nbsp;
+      <a href="/help" style="color:var(--ice-400);" target="_blank">Help & Docs</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

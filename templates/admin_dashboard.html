@@ -1,0 +1,132 @@
+{% extends "admin_base.html" %}
+{% block title %}Dashboard · {{ cfg.app_name }}{% endblock %}
+{% block content %}
+
+<div class="section-header">
+  <div class="section-title">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    Dashboard
+  </div>
+  <a href="/admin/upload" class="btn btn-primary btn-sm">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Upload Images
+  </a>
+</div>
+
+<!-- Stats -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.total_images }}</div>
+    <div class="stat-label">Total Images</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.done_images }}</div>
+    <div class="stat-label">Completed</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.available_images }}</div>
+    <div class="stat-label">Available</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.total_labels }}</div>
+    <div class="stat-label">Total Labels</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.total_workers }}</div>
+    <div class="stat-label">Workers</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.total_groups }}</div>
+    <div class="stat-label">Groups</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+
+  <!-- Labels by class -->
+  <div class="card">
+    <div class="card-header">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span style="font-weight:600;font-size:.9rem;">Labels by Class</span>
+    </div>
+    <div class="card-body">
+      {% if stats.labels_by_class %}
+        {% set max_count = [stats.labels_by_class[0].cnt, 1]|max %}
+        {% for item in stats.labels_by_class %}
+        {% set pct = [(item.cnt * 100 // max_count), 100]|min %}
+        <div style="margin-bottom:.62rem;">
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.25rem;">
+            <span style="display:flex;align-items:center;gap:.4rem;">
+              <span style="width:9px;height:9px;border-radius:50%;background:{{ item.color }};display:inline-block;flex-shrink:0;"></span>
+              {{ item.name }}
+            </span>
+            <span style="font-family:var(--f-mono);font-size:.78rem;color:var(--tx-3);">{{ item.cnt }}</span>
+          </div>
+          <div style="background:var(--bg-muted);border-radius:100px;height:5px;overflow:hidden;">
+            <div style="height:100%;background:{{ item.color }};border-radius:100px;width:{{ pct }}%;"></div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state"><div class="empty-state-icon">📊</div>No labels yet</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Leaderboard -->
+  <div class="card">
+    <div class="card-header">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span style="font-weight:600;font-size:.9rem;">Worker Leaderboard</span>
+    </div>
+    <div class="card-body" style="padding:0;">
+      {% if stats.leaderboard %}
+      <table>
+        <thead><tr><th>Worker</th><th>Images Done</th><th>Labels</th><th>Last Active</th></tr></thead>
+        <tbody>
+        {% for w in stats.leaderboard %}
+        <tr>
+          <td><strong>{{ w.worker_name }}</strong></td>
+          <td class="font-mono">{{ w.image_count }}</td>
+          <td class="font-mono">{{ w.label_count }}</td>
+          <td class="text-muted font-mono" style="font-size:.75rem;">{{ w.last_active[:10] if w.last_active else '—' }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <div class="empty-state"><div class="empty-state-icon">👤</div>No workers yet</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Groups overview -->
+<div class="card mt-3">
+  <div class="card-header">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    <span style="font-weight:600;font-size:.9rem;">Groups</span>
+    <a href="/admin/groups" class="btn btn-ghost btn-sm" style="margin-left:auto;">Manage →</a>
+  </div>
+  <div class="card-body" style="padding:0;">
+    {% if groups %}
+    <table>
+      <thead><tr><th>Name</th><th>Type</th><th>Images</th><th>Description</th></tr></thead>
+      <tbody>
+      {% for g in groups %}
+      <tr>
+        <td><strong>{{ g.name }}</strong></td>
+        <td><span class="badge badge-ice">{{ g.type }}</span></td>
+        <td class="font-mono">{{ g.image_count }}</td>
+        <td class="text-muted">{{ g.description or '—' }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty-state"><div class="empty-state-icon">📁</div>No groups yet · <a href="/admin/groups">Create one</a></div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

@@ -56,6 +56,7 @@ def require_worker():
     return None
 
 
+
 # ── Root ──────────────────────────────────────────────────────────────────────
 
 @app.route("/")
@@ -71,7 +72,7 @@ def root():
 def admin_login():
     if request.method == "POST":
         token = request.form.get("token", "")
-        if token == cfg().get("admin_token", "awi-admin-2024"):
+        if token == cfg().get("admin_token", "roffltrollisttoll"):
             session["is_admin"] = True
             return redirect(url_for("admin_dashboard"))
         flash("Invalid admin token", "error")

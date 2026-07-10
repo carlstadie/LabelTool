@@ -58,11 +58,13 @@ const BASEMAPS = [
 
 // ── State ───────────────────────────────────────────────────
 let map, tileLayer, drawnItems;
+let existingItems;
 let currentMode        = 'cursor';
 let activeClassId      = null;
 let pendingLayer       = null;
 let pendingLabels      = [];
 let savedCount         = 0;
+let existingCount      = 0;
 let activeDrawHandler  = null;
 let deleteClickHandler = null;
 let activeBmId         = 'esri_imagery';
@@ -72,6 +74,9 @@ let activeBmName       = 'Esri World Imagery';
 document.addEventListener('DOMContentLoaded', () => {
   map = L.map('map', { zoomControl: true, attributionControl: true });
   map.setView([72, 90], 5);
+
+  existingItems = new L.FeatureGroup();
+  map.addLayer(existingItems);
 
   drawnItems = new L.FeatureGroup();
   map.addLayer(drawnItems);
@@ -95,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   if (CLASSES.length) selectClass(CLASSES[0].id);
+  loadExistingLabels();
 });
 
 function setVal(id, val) {
@@ -644,6 +650,152 @@ function popupHTML(cls, basemap, unsaved) {
     <div style="color:#3b8ab8;font-size:.7rem;margin-top:.15rem;">🗺 ${basemap}</div>
     ${unsaved ? '<div style="color:#f59e0b;font-size:.72rem;margin-top:.2rem;">⬤ unsaved</div>' : ''}
   </div>`;
+}
+
+function popupExistingHTML(cls, lbl) {
+  const clsName = cls?.name || lbl.class_name || 'Unknown';
+  const worker = lbl.worker_name || 'unknown';
+  const source = lbl.original_filename || 'Unnamed image';
+  const basemap = lbl.basemap || 'n/a';
+  return `<div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:.82rem;min-width:170px;">
+    <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.25rem;">
+      <span style="width:10px;height:10px;border-radius:50%;background:${cls?.color || '#4A90D9'};display:inline-block;"></span>
+      <strong>${clsName}</strong>
+    </div>
+    <div style="color:#64748b;font-size:.75rem;">by ${worker}</div>
+    <div style="color:#64748b;font-size:.72rem;margin-top:.1rem;">source: ${source}</div>
+    <div style="color:#3b8ab8;font-size:.7rem;margin-top:.15rem;">map: ${basemap}</div>
+    <div style="color:#94a3b8;font-size:.7rem;margin-top:.2rem;">existing label</div>
+  </div>`;
+}
+
+function wrapLongitude(lon) {
+  return ((((lon + 180) % 360) + 360) % 360) - 180;
+}
+
+function looksLikeLonLatDegrees(coord) {
+  return Array.isArray(coord) && coord.length >= 2 &&
+    Number.isFinite(coord[0]) && Number.isFinite(coord[1]) &&
+    Math.abs(coord[1]) <= 90 && Math.abs(coord[0]) <= 540;
+}
+
+function looksLikeWebMercator(coord) {
+  if (!Array.isArray(coord) || coord.length < 2) return false;
+  if (!Number.isFinite(coord[0]) || !Number.isFinite(coord[1])) return false;
+  const max = 20037508.342789244;
+  // EPSG:3857 coordinates are meters and should have Y far outside degree range.
+  return Math.abs(coord[1]) > 90 &&
+         Math.abs(coord[0]) <= max * 1.2 && Math.abs(coord[1]) <= max * 1.2;
+}
+
+function mercatorToWgs84(coord) {
+  const x = coord[0];
+  const y = coord[1];
+  const lon = (x / 20037508.342789244) * 180;
+  const lat = (Math.atan(Math.exp((y / 20037508.342789244) * Math.PI)) * 360 / Math.PI) - 90;
+  return [lon, Math.max(-90, Math.min(90, lat))];
+}
+
+function normalizeGeometryCoordinates(node) {
+  if (!Array.isArray(node)) return node;
+  if (node.length >= 2 && typeof node[0] === 'number' && typeof node[1] === 'number') {
+    if (looksLikeLonLatDegrees(node)) {
+      return [wrapLongitude(node[0]), node[1], ...node.slice(2)];
+    }
+    if (looksLikeWebMercator(node)) {
+      const projected = mercatorToWgs84(node);
+      return [wrapLongitude(projected[0]), projected[1], ...node.slice(2)];
+    }
+    return [wrapLongitude(node[0]), node[1], ...node.slice(2)];
+  }
+  return node.map(normalizeGeometryCoordinates);
+}
+
+function normalizeGeometryForDisplay(geojson) {
+  if (!geojson || !geojson.type) return null;
+
+  if (geojson.type === 'Feature') {
+    return {
+      ...geojson,
+      geometry: normalizeGeometryForDisplay(geojson.geometry),
+    };
+  }
+
+  if (geojson.type === 'FeatureCollection' && Array.isArray(geojson.features)) {
+    return {
+      ...geojson,
+      features: geojson.features.map(f => ({
+        ...f,
+        geometry: normalizeGeometryForDisplay(f.geometry),
+      })),
+    };
+  }
+
+  if (!Array.isArray(geojson.coordinates)) return geojson;
+  return {
+    ...geojson,
+    coordinates: normalizeGeometryCoordinates(geojson.coordinates),
+  };
+}
+
+function layerFromStoredLabel(lbl) {
+  if (!lbl?.geojson) return null;
+  const parsed = JSON.parse(lbl.geojson);
+  const normalized = normalizeGeometryForDisplay(parsed);
+  const geo = L.geoJSON(normalized, {
+    pointToLayer: (_feature, latlng) => L.circleMarker(latlng, {
+      radius: 6,
+      weight: 2,
+      fillOpacity: 0.2,
+    }),
+  });
+  const layers = geo.getLayers();
+  return layers.length ? layers[0] : null;
+}
+
+async function loadExistingLabels() {
+  try {
+    const resp = await fetch('/api/labels');
+    if (!resp.ok) return;
+    const items = await resp.json();
+
+    for (const lbl of items) {
+      let layer;
+      try {
+        layer = layerFromStoredLabel(lbl);
+      } catch {
+        continue;
+      }
+      if (!layer) continue;
+
+      const cls = CLASSES.find(c => c.id === lbl.class_id) ||
+                  { color: '#4A90D9', name: lbl.class_name || 'Unknown', id: null };
+      styleLayer(layer, cls.color, false);
+      if (layer.setStyle) {
+        layer.setStyle({
+          weight: 1.5,
+          fillOpacity: 0.12,
+          dashArray: '4 4',
+        });
+      }
+      layer.bindPopup(popupExistingHTML(cls, lbl));
+      existingItems.addLayer(layer);
+      existingCount += 1;
+    }
+
+    if (drawnItems) drawnItems.bringToFront();
+    setVal('existing-count', existingCount);
+
+    const bounds = existingItems.getBounds?.();
+    if (bounds && bounds.isValid && bounds.isValid()) {
+      map.fitBounds(bounds.pad(0.15), {
+        maxZoom: 12,
+        animate: false,
+      });
+    }
+  } catch (err) {
+    console.error('Existing label load error:', err);
+  }
 }
 
 // ── Save / Delete ───────────────────────────────────────────
